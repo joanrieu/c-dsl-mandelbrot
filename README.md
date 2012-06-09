@@ -16,3 +16,6 @@ Controls
 
 - Left click and drag to move
 - Right click and drag for rectangle zoom
+
+- Press R to reset the zoom
+- Press P to save a screenshot in "mandelbrot.bmp"
