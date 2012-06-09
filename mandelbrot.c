@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
                                 } else if (etat == RECTANGLE_OU_DEZOOM) {
                                         if (sx == ex && sy == ey) {
                                                 const double cx = r2.x1;
-                                                const double cy = r2.x1;
+                                                const double cy = r2.y1;
                                                 r2 = r;
                                                 r2.x1 *= 2;
                                                 r2.x2 *= 2;
