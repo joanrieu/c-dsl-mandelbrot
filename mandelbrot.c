@@ -166,7 +166,8 @@ int main(int argc, char** argv) {
                 RIEN,
                 AFFICHER,
                 CALCULER,
-                RECTANGLE
+                MOUVEMENT_OU_ZOOM,
+                RECTANGLE_OU_DEZOOM
         } etat = CALCULER;
 
         int sx, sy, ex, ey;
@@ -190,7 +191,10 @@ int main(int argc, char** argv) {
                                 case SDL_MOUSEBUTTONDOWN:
                                 sx = ex = event.button.x;
                                 sy = ey = event.button.y;
-                                etat = RECTANGLE;
+                                if (event.button.button == SDL_BUTTON_LEFT)
+                                        etat = MOUVEMENT_OU_ZOOM;
+                                else if (event.button.button == SDL_BUTTON_RIGHT)
+                                        etat = RECTANGLE_OU_DEZOOM;
                                 break;
 
                                 case SDL_MOUSEMOTION:
@@ -201,14 +205,51 @@ int main(int argc, char** argv) {
                                 case SDL_MOUSEBUTTONUP:
                                 ex = event.button.x;
                                 ey = event.button.y;
-                                if (sx != ex && sy != ey) {
-                                        ecranVersRepere(&r, sx, sy, &r2.x1, &r2.y1);
-                                        ecranVersRepere(&r, ex, ey, &r2.x2, &r2.y2);
-                                        r = r2;
+                                ecranVersRepere(&r, sx, sy, &r2.x1, &r2.y1);
+                                ecranVersRepere(&r, ex, ey, &r2.x2, &r2.y2);
+                                if (etat == MOUVEMENT_OU_ZOOM) {
                                         etat = CALCULER;
-                                } else {
-                                        etat = AFFICHER;
+                                        const double mx = r2.x2 - r2.x1;
+                                        const double my = r2.y2 - r2.y1;
+                                        if (mx != 0 || my != 0) {
+                                                r2 = r;
+                                                r2.x1 -= mx;
+                                                r2.x2 -= mx;
+                                                r2.y1 -= my;
+                                                r2.y2 -= my;
+                                        } else {
+                                                const double cx = r2.x1;
+                                                const double cy = r2.y1;
+                                                r2 = r;
+                                                r2.x1 += cx;
+                                                r2.x2 += cx;
+                                                r2.y1 += cy;
+                                                r2.y2 += cy;
+                                                r2.x1 /= 2;
+                                                r2.x2 /= 2;
+                                                r2.y1 /= 2;
+                                                r2.y2 /= 2;
+                                        }
+                                } else if (etat == RECTANGLE_OU_DEZOOM) {
+                                        if (sx == ex && sy == ey) {
+                                                const double cx = r2.x1;
+                                                const double cy = r2.x1;
+                                                r2 = r;
+                                                r2.x1 *= 2;
+                                                r2.x2 *= 2;
+                                                r2.y1 *= 2;
+                                                r2.y2 *= 2;
+                                                r2.x1 -= cx;
+                                                r2.x2 -= cx;
+                                                r2.y1 -= cy;
+                                                r2.y2 -= cy;
+                                                etat = CALCULER;
+                                        } else if (sx != ex && sy != ey)
+                                                etat = CALCULER;
+                                        else
+                                                etat = AFFICHER;
                                 }
+                                r = r2;
                                 break;
 
                                 default:
@@ -238,10 +279,17 @@ int main(int argc, char** argv) {
 
                 }
 
-                if (etat == AFFICHER || etat == RECTANGLE)
+                if (etat == AFFICHER || etat == RECTANGLE_OU_DEZOOM)
                         SDL_BlitSurface(r.s, NULL, ecran, NULL);
+                else if (etat == MOUVEMENT_OU_ZOOM) {
+                        SDL_FillRect(ecran, NULL, SDL_MapRGB(ecran->format, 0, 0, 0));
+                        SDL_Rect dest = ecran->clip_rect;
+                        dest.x += ex - sx;
+                        dest.y += ey - sy;
+                        SDL_BlitSurface(r.s, NULL, ecran, &dest);
+                }
 
-                if (etat == RECTANGLE) {
+                if (etat == RECTANGLE_OU_DEZOOM && (sx != ex || sy != ey)) {
 
                         int x1 = (sx < ex ? sx : ex);
                         int x2 = (x1 == sx ? ex : sx);
@@ -265,7 +313,7 @@ int main(int argc, char** argv) {
 
                 }
 
-                if (etat == AFFICHER || etat == RECTANGLE)
+                if (etat == AFFICHER || etat == RECTANGLE_OU_DEZOOM || etat == MOUVEMENT_OU_ZOOM)
                         SDL_Flip(ecran);
 
                 if (etat == AFFICHER)
