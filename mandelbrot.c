@@ -172,6 +172,7 @@ int main(int argc, char** argv) {
 
         int sx, sy, ex, ey;
 
+        Repere r1 = r; // Sert pour remettre à zéro le zoom
         Repere r2 = r;
 
         SDL_Event event;
@@ -182,8 +183,15 @@ int main(int argc, char** argv) {
                         switch (event.type) {
 
                                 case SDL_KEYDOWN:
-                                if (event.key.keysym.sym != SDLK_ESCAPE)
+                                if (event.key.keysym.sym != SDLK_ESCAPE) {
+                                        if (event.key.keysym.sym == SDLK_r) {
+                                                r = r1;
+                                                etat = CALCULER;
+                                        } else if (event.key.keysym.sym == SDLK_p) {
+                                                SDL_SaveBMP(r.s, "mandelbrot.bmp");
+                                        }
                                         break;
+                                }
                                 case SDL_QUIT:
                                 etat = QUITTER;
                                 break;
@@ -211,45 +219,42 @@ int main(int argc, char** argv) {
                                         etat = CALCULER;
                                         const double mx = r2.x2 - r2.x1;
                                         const double my = r2.y2 - r2.y1;
-                                        if (mx != 0 || my != 0) {
-                                                r2 = r;
-                                                r2.x1 -= mx;
-                                                r2.x2 -= mx;
-                                                r2.y1 -= my;
-                                                r2.y2 -= my;
-                                        } else {
+                                        if (mx != 0 || my != 0) { // Mouvement
+                                                r.x1 -= mx;
+                                                r.x2 -= mx;
+                                                r.y1 -= my;
+                                                r.y2 -= my;
+                                        } else { // Zoom
                                                 const double cx = r2.x1;
                                                 const double cy = r2.y1;
-                                                r2 = r;
-                                                r2.x1 += cx;
-                                                r2.x2 += cx;
-                                                r2.y1 += cy;
-                                                r2.y2 += cy;
-                                                r2.x1 /= 2;
-                                                r2.x2 /= 2;
-                                                r2.y1 /= 2;
-                                                r2.y2 /= 2;
+                                                r.x1 += cx;
+                                                r.x2 += cx;
+                                                r.y1 += cy;
+                                                r.y2 += cy;
+                                                r.x1 /= 2;
+                                                r.x2 /= 2;
+                                                r.y1 /= 2;
+                                                r.y2 /= 2;
                                         }
                                 } else if (etat == RECTANGLE_OU_DEZOOM) {
-                                        if (sx == ex && sy == ey) {
+                                        if (sx != ex && sy != ey) { // Rectangle
+                                                r = r2;
+                                                etat = CALCULER;
+                                        } else if (sx == ex && sy == ey) { // Dezoom
                                                 const double cx = r2.x1;
                                                 const double cy = r2.y1;
-                                                r2 = r;
-                                                r2.x1 *= 2;
-                                                r2.x2 *= 2;
-                                                r2.y1 *= 2;
-                                                r2.y2 *= 2;
-                                                r2.x1 -= cx;
-                                                r2.x2 -= cx;
-                                                r2.y1 -= cy;
-                                                r2.y2 -= cy;
+                                                r.x1 *= 2;
+                                                r.x2 *= 2;
+                                                r.y1 *= 2;
+                                                r.y2 *= 2;
+                                                r.x1 -= cx;
+                                                r.x2 -= cx;
+                                                r.y1 -= cy;
+                                                r.y2 -= cy;
                                                 etat = CALCULER;
-                                        } else if (sx != ex && sy != ey)
-                                                etat = CALCULER;
-                                        else
+                                        } else // Empeche le zoom sur un rectangle de largeur/hauteur nulle
                                                 etat = AFFICHER;
                                 }
-                                r = r2;
                                 break;
 
                                 default:
@@ -271,6 +276,22 @@ int main(int argc, char** argv) {
                                 const double tmp = r.y1;
                                 r.y1 = r.y2;
                                 r.y2 = tmp;
+                        }
+
+                        const double aspect = (double)ecran->w / ecran->h;
+
+                        const double w = r.x2 - r.x1;
+                        const double h = r.y2 - r.y1;
+                        const double aspect2 = w / h;
+
+                        if (aspect2 < aspect) { // Pas assez large
+                                const double dx = (aspect / aspect2 - 1) * w / 2;
+                                r.x1 -= dx;
+                                r.x2 += dx;
+                        } else { // Pas assez haut
+                                const double dy = (aspect2 / aspect - 1) * h / 2;
+                                r.y1 -= dy;
+                                r.y2 += dy;
                         }
 
                         mandelbrot(&r);
